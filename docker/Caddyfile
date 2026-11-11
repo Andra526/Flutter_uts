@@ -1,0 +1,20 @@
+# Caddy: reverse proxy + HTTPS otomatis (Let's Encrypt).
+# Nilai {$...} dibaca dari environment servis "caddy" (lihat docker-compose.yml / .env).
+{
+	email {$ACME_EMAIL}
+}
+
+# Website admin (halaman depan + admin)
+{$WEB_DOMAIN} {
+	encode gzip zstd
+	reverse_proxy admin-web:80
+}
+
+# Backend API (dipanggil aplikasi Flutter dan website admin)
+{$API_DOMAIN} {
+	encode gzip zstd
+	request_body {
+		max_size 20MB
+	}
+	reverse_proxy backend:3000
+}

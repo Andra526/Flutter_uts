@@ -1,0 +1,88 @@
+# GymFit -- production di satu VPS: PostgreSQL + backend NestJS + website admin + Caddy (HTTPS).
+# Jalankan:  docker compose up -d --build      (isi dulu file .env, lihat .env.example)
+name: gymfit
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gymfit
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?isi POSTGRES_PASSWORD di .env}
+      POSTGRES_DB: gymfit
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gymfit -d gymfit"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # Tidak ada "ports": database hanya bisa diakses dari dalam jaringan Docker.
+
+  # Sekali jalan: menerapkan migration schema, lalu berhenti.
+  migrate:
+    build:
+      context: ./backend
+      target: build
+    command: ["npx", "prisma", "migrate", "deploy"]
+    environment: &dbenv
+      DATABASE_URL: postgresql://gymfit:${POSTGRES_PASSWORD}@db:5432/gymfit
+      DIRECT_URL: postgresql://gymfit:${POSTGRES_PASSWORD}@db:5432/gymfit
+      DATABASE_SSL: disable
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    build:
+      context: ./backend
+      target: runtime
+    restart: unless-stopped
+    environment:
+      <<: *dbenv
+      NODE_ENV: production
+      PORT: "3000"
+      JWT_SECRET: ${JWT_SECRET:?isi JWT_SECRET di .env}
+      JWT_EXPIRES_IN: 7d
+      CORS_ORIGINS: https://${WEB_DOMAIN:?isi WEB_DOMAIN di .env}
+      TRUST_PROXY: "1"
+      UPLOAD_DRIVER: local
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  admin-web:
+    build:
+      context: ./admin-web
+      args:
+        VITE_API_URL: https://${API_DOMAIN:?isi API_DOMAIN di .env}
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      WEB_DOMAIN: ${WEB_DOMAIN}
+      API_DOMAIN: ${API_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?isi ACME_EMAIL di .env}
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - admin-web
+
+volumes:
+  pgdata:
+  uploads:
+  caddy_data:
+  caddy_config:

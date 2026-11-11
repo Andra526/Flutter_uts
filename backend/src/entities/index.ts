@@ -1,0 +1,16 @@
+// Semua entitas di satu tempat: import { UserEntity, BookingEntity } from '../entities';
+export * from '../modules/users/entities/user.entity';
+export * from '../modules/gyms/entities/gym.entity';
+export * from '../modules/gyms/entities/gym-facility.entity';
+export * from '../modules/gyms/entities/gym-image.entity';
+export * from '../modules/gyms/entities/gym-plan.entity';
+export * from '../modules/gym-memberships/entities/gym-membership.entity';
+export * from '../modules/trainers/entities/trainer-profile.entity';
+export * from '../modules/trainer-schedules/entities/trainer-schedule.entity';
+export * from '../modules/bookings/entities/booking.entity';
+export * from '../modules/training-sessions/entities/training-session.entity';
+export * from '../modules/client-goals/entities/client-goal.entity';
+export * from '../modules/meal-plans/entities/meal-plan-item.entity';
+export * from '../modules/workout-plans/entities/workout-plan-item.entity';
+export * from '../modules/workout-plans/entities/workout-log.entity';
+export * from '../modules/session-packages/entities/session-package.entity';
